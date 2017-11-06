@@ -74,13 +74,14 @@ jar --create --file=mlib/com.example.requirer.jar --main-class=com.example.requi
 ~~但是遇到了异常，暂时还未解决~~
 
 ![exception][8]
+更新：Java9模块不允许同名的包存在于多个模块~~jar包~~中，遇到这样的场景，要不改包名，要不整合为一个模块。F-U-C-K
 
 代码正常运行，如下：
 ![run-ok][9]
 
 完整代码：https://github.com/pkpk1234/java9-module-cmd-demo
 
-更新：Java9模块不允许同名的包存在于多个模块~~jar包~~中，遇到这样的场景，要不改报名，要不整合为一个模块。F-U-C-K
+
 
 
   [1]: https://zhuanlan.zhihu.com/p/30743052
