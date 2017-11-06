@@ -1,95 +1,86 @@
-# 使用命令行编译和运行Java9模块hello world
+#使用Eclipse编写Java9模块hello world
 
-标签（空格分隔）： Java Java9
+标签（空格分隔）： Java9  模块 Jigsaw
 
 ---
 
-[上一篇文章][1]中使用Eclipse编写和运行了最简单的Java9模块。
-此处使用命令javac、jar对Java9模块进行编译、打包，并使用命令java运行。
-拷贝[上一篇文章中的代码][2]，并将目录结构修改如下：
+本文记录用Eclipse开发最简单的Java9模块的过程。
+Java9模块的其他详细信息后续再写。
+完成后的工程结构如下：
+![project-structure][1]
 
-![此处输入图片的描述][3]
+##编写提供方
+我们将创建名为com.example.hello的模块。
+新建java工程hello-module，注意选择Java版本为java9。
+![创建工程][2]
 
-其中的java文件全部拷贝自上一篇文章，没有任何改动。
-新增了mods目录，用于存放编译后的模块class文件。
-新增了mlib目录，用于存放打包后的模块jar文件。
+创建模块文件夹，根据非强制的约定，模块文件夹的名称和模块的名称相同。因为需要编译模块，所以可以直接将模块文件夹创建为Eclipse的source folder。
+![source-folder][3]
 
-注意：如果是在windows上，需要将 / 修改为 \ 。
+![souce-folder2][4]
 
-## 编译com.exmaple.hello模块
-运行命令 ~~javac -d mods/com.example.hello hello/com.example.hello/module-info.java hello/com.example.hello/com/example/hello/HelloModule.java~~
+创建模块描述文件module-info.java，低版本的Eclipse会认为module-info.java不是合法的java文件名，所以此处直接创建module-info.java的File。
+![new-mod-file1][5]
 
-javac -encoding "UTF-8" -d mods --module-source-path hello hello/com.example.hello/module-info.java hello/com.example.hello/com/example/hello/HelloModule.java
+![new-mod-file2][6]
+在module-info.java中，我们将模块暴露出去。如下：
+```java
+module com.example.hello {
+	exports com.example.hello;
+}
+```
+编写类HelloModule，里面只有一个main方法，提供给外部调用。如下：
+```java
+public class HelloModule {
+	public static void main(String[] args) {
+		Class<HelloModule> clazz = HelloModule.class;
+		Module module = clazz.getModule();
+		String moduleName = module.getName();
+		System.out.println("Hello from module: "+moduleName);
+	}
+}
+```
+这里使用了Java9中新增加的Module类，获取到模块的名称并输出。
 
-用-d指定编译目的地为mods+模块名。
-编译为模块时需要指定模块描述文件module-info.java。
-参数--module-source-path指定了模块源码路径。
-编译完成后，目录结构如下：
+##编写调用方
+我们将创建com.example.requirer的模块，此模块依赖了模块com.example.hello。
+创建Java工程hello-requirer，注意选择Java版本为java9。
+使用创建com.example.hello模块类似的方式，创建source folder。
+编写module-info.java，指定依赖。如下：
+```java
+module com.example.requirer {
+	requires com.example.hello;
+}
+```
+此时Eclipse编译会抛出异常，因为找不到名为com.example.hello的模块。
+![module-notfound][7]
+Eclipse中可以通过添加module path解决。
+打开工程hello-requirer的properties界面
+![此处输入图片的描述][8]
+在Java Build Path处，添加module path为工程hello-module
+![add-module][9]
 
-![file-tree-02][4]
+调用com.example.hello模块中方法，如下：
+```java
+public class RequirerMain {
+	public static void main(String[] args) {
+		HelloModule.main(args);
+		System.out.println("Requirer main finished.");
+	}
+}
+```
+运行输出如下：
+Hello from module: com.example.hello
+Requirer main finished.
 
-注意mods下面创建了目录com.example.hello，编译后的com.exmaple.hello模块的class文件即位于该目录下。
+完整代码：https://github.com/pkpk1234/java9-module-Eclipse-demo
 
-## 编译com.example.requiere模块
-运行命令 ~~javac -d mods/com.example.requirer --module-path mods  requirer/com.example.requirer/module-info.java requirer/com.example.requirer/com/example/requiere/RequirerMain.java~~
-
-javac -encoding "UTF-8" -d mods --module-path mods --module-source-path requirer requirer/com.example.requirer/module-info.java requirer/com.example.requirer/com/example/requiere/RequirerMain.java
-
-注意其中的--module-path参数指定了依赖的模块com.exmaple.hello位于目录mods下。
-如果不添加此参数，javac会抛出错误: 找不到模块: com.example.hello。
-
-![module-notfound][5]
-
-编译完成后，目录结构如下：
-
-![file-tree-03][6]
-
-注意mods下面创建了目录com.example.requiere，编译后的com.example.requiere模块的class文件即位于该目录下。
-
-## 运行
-运行命令java --module-path mods -m com.example.requirer/com.example.requiere.RequirerMain
-
-注意：
-使用参数--module-path mods指定了模块位于目录mods下。
-
-使用-m com.example.requirer/com.example.requiere.RequirerMain指定了运行模块com.example.requirer中的类com.example.requiere.RequirerMain中的main函数。
-
-## 打包
-首先打包模块com.example.hello为com.example.hello.jar，命令如下：
-jar --create --file=mlib/com.example.hello.jar -C mods/com.example.hello .
-
-参数--file=mlib/com.example.hello.jar指定了jar的路径。
-参数-C指定了jar包要包含的目录，此处为模块的class路径。
-
-然后打包模块com.example.requiere为com.example.requiere.jar，命令如下：
-
-jar --create --file=mlib/com.example.requirer.jar --main-class=com.example.requiere.RequirerMain -C mods/com.example.requirer .
-
-参数-main-class指定了jar包的Main-Class，即 java -jar com.example.requirer.jar时会执行com.example.requiere.RequirerMain中的main函数。
-打包完成后，目录结构如下：
-
-![file-tree-04][7]
-
-运行命令：java --module-path mlib -m com.example.requirer
-~~但是遇到了异常，暂时还未解决~~
-
-![exception][8]
-更新：Java9模块不允许同名的包存在于多个模块~~jar包~~中，遇到这样的场景，要不改包名，要不整合为一个模块。F-U-C-K
-
-代码正常运行，如下：
-![run-ok][9]
-
-完整代码：https://github.com/pkpk1234/java9-module-cmd-demo
-
-
-
-
-  [1]: https://zhuanlan.zhihu.com/p/30743052
-  [2]: https://github.com/pkpk1234/java9-module-eclipse-demo
-  [3]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module-cmd/file-tree.jpg
-  [4]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module-cmd/file-tree-02.jpg
-  [5]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module-cmd/module-notfound.jpg
-  [6]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module-cmd/file-tree-03.jpg
-  [7]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module-cmd/file-tree-04.jpg
-  [8]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module-cmd/exception.jpg
-  [9]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module-cmd/run-ok.jpg
+  [1]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module/project-structure.jpg
+  [2]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module/create-project-1.jpg
+  [3]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module/source-folder.jpg
+  [4]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module/souce-folder2.jpg
+  [5]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module/new-mod-file1.jpg
+  [6]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module/Jietu20171104-200735.jpg
+  [7]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module/module-notfound.jpg
+  [8]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module/project-properties.jpg
+  [9]: https://ip.freep.cn/593396/java9%E6%A8%A1%E5%9D%97/hello-module/add-module.jpg
